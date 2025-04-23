@@ -530,8 +530,11 @@ public class TextGraphProcessor {
                         break;
 
                     case 8:
-                        double prValue = processor.calPageRank("new");
-                        System.out.println("analyzed 的 PageRank = " + prValue);
+                        System.out.print("请输入计算单词: ");
+                        String wordToCal = scanner.nextLine();
+
+                        double prValue = processor.calPageRank(wordToCal);
+                        System.out.println(wordToCal + " 的 PageRank = " + prValue);
 
                         break;
                     case 9:
