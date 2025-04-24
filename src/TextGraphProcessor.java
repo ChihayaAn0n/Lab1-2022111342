@@ -549,6 +549,8 @@ public class TextGraphProcessor {
             System.err.println("请确保input.txt文件存在于程序所在目录。");
         } finally {
             scanner.close();
+            System.out.println("第二次修改");
+
         }
     }
 }
