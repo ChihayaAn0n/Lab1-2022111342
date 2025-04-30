@@ -2,7 +2,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-        import java.util.regex.*;
+import java.util.regex.*;
 
 public class TextGraphProcessorTest {
     private Map<String, Map<String, Integer>> graph;
@@ -605,7 +605,7 @@ public class TextGraphProcessorTest {
 
         try {
             // 直接指定文件路径为input.txt
-            String filePath = "D:\\JavaProject\\Software\\Lab1_v1\\src\\Easy Test_simple.txt";
+            String filePath = "D:\\JavaProject\\Software\\Lab1_v1\\src\\Easy Test.txt";
             System.out.println("正在读取文件: " + filePath);
             processor.processTextFile(filePath);
 
