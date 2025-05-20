@@ -1,9 +1,7 @@
-节点: shared
-边: shared->the
-节点: the
-边: the->scientist
-节点: scientist
-边: scientist->analyzed
-节点: analyzed
-边: analyzed->the
-节点: the
+节点: seek
+边: seek->out
+节点: out
+边: out->new
+节点: new
+边: new->civilizations
+节点: civilizations

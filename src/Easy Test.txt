@@ -1,8 +1,2 @@
-To explore strange new worlds, 
-To seek out new life and new civilizations
-
-Change on B2
-=======
-Change 1 on B1
-Change1 on C4
-
+The scientist carefully analyzed the data, wrote a detailed report, 
+and shared the report with the team, but the team requested more data, so the scientist analyzed it again

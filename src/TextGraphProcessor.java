@@ -439,7 +439,7 @@ public class TextGraphProcessor {
 
         try {
             // 直接指定文件路径为input.txt
-            String filePath = "D:\\JavaProject\\Software\\Lab1_v1\\src\\Easy Test.txt";
+            String filePath = "D:\\JavaProject\\Software\\Lab1_v1\\src\\Easy Test_simple.txt";
             System.out.println("正在读取文件: " + filePath);
             processor.processTextFile(filePath);
 

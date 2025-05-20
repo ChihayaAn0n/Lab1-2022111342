@@ -1,8 +1,23 @@
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.regex.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
 
 public class TextGraphProcessorTest {
     private Map<String, Map<String, Integer>> graph;
@@ -295,7 +310,8 @@ public class TextGraphProcessorTest {
         return String.join(" ", result);
     }
 
-    // 修改后的calcShortestPath方法
+    // calcShortestPath方法
+    @SuppressWarnings("checkstyle:Indentation")
     public String calcShortestPath(String word1, String word2) {
         word1 = word1.toLowerCase();
         word2 = word2.toLowerCase();
@@ -727,7 +743,7 @@ public class TextGraphProcessorTest {
             }
         } catch (IOException e) {
             System.err.println("处理文件时出错: " + e.getMessage());
-            System.err.println("请确保input.txt文件存在于程序所在目录。");
+            System.err.println("请确保input.。");
         } finally {
             scanner.close();
         }
