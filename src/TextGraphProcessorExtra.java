@@ -19,21 +19,53 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
+/**
+ * 文本图处理器，用于构建和处理文本的有向图表示。.
+ * 提供多种图算法操作，包括桥接词查找、最短路径计算、PageRank计算等。
+ *
+ * <p>主要功能包括：
+ * <ul>
+ *   <li>从文本文件构建有向图</li>
+ *   <li>可视化图结构</li>
+ *   <li>查询节点度数和边权重</li>
+ *   <li>查找桥接词</li>
+ *   <li>生成包含桥接词的新文本</li>
+ *   <li>计算最短路径</li>
+ *   <li>执行随机游走</li>
+ *   <li>计算PageRank值</li>
+ * </ul>
+ *
+ * @author 作者名
+ * @version 1.0
+ */
 public class TextGraphProcessorExtra {
+    /** 存储有向图结构的邻接表. */
     private Map<String, Map<String, Integer>> graph;
+
+    /** 存储处理后的单词列表. */
     private List<String> words;
 
-    // 默认PageRank参数
+    /** 默认的PageRank阻尼系数. */
     private static final double DEFAULT_D = 0.85;
+    /** 默认的最大迭代次数. */
     private static final int DEFAULT_MAX_ITER = 100;
+    /** 默认的收敛容差. */
     private static final double DEFAULT_TOL = 1e-6;
 
+    /**
+     * 构造一个新的文本图处理器。.
+     */
     public TextGraphProcessorExtra() {
         graph = new HashMap<>();
         words = new ArrayList<>();
     }
 
-    // 读取并处理文本文件
+    /**
+     * 读取并处理文本文件，构建有向图。.
+     *
+     * @param filePath 要处理的文本文件路径
+     * @throws IOException 如果读取文件时发生I/O错误
+     */
     public void processTextFile(String filePath) throws IOException {
         StringBuilder content = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
@@ -46,7 +78,11 @@ public class TextGraphProcessorExtra {
         buildGraph();
     }
 
-    // 处理文本内容
+    /**
+     * 处理文本内容，将其转换为单词序列。.
+     *
+     * @param text 要处理的原始文本
+     */
     private void processText(String text) {
         // 替换所有非字母字符为空格，并转换为小写
         String processed = text.replaceAll("[^a-zA-Z]", " ").toLowerCase();
@@ -61,7 +97,9 @@ public class TextGraphProcessorExtra {
         }
     }
 
-    // 构建有向图
+    /**
+     * 根据处理后的单词序列构建有向图。.
+     */
     private void buildGraph() {
         graph.clear();
 
@@ -84,13 +122,23 @@ public class TextGraphProcessorExtra {
         }
     }
 
+    /**
+     * 获取构建的有向图。.
+     *
+     * @return 有向图的邻接表表示
+     */
     public Map<String, Map<String, Integer>> getGraph() {
         return graph;
     }
 
-    public void showDirectedGraph(Map<String, Map<String, Integer>> G) {
+    /**
+     * 显示有向图的结构。.
+     *
+     * @param showGraph 要显示的有向图
+     */
+    public void showDirectedGraph(Map<String, Map<String, Integer>> showGraph) {
         System.out.println("有向图结构:");
-        for (Map.Entry<String, Map<String, Integer>> entry : G.entrySet()) {
+        for (Map.Entry<String, Map<String, Integer>> entry : showGraph.entrySet()) {
             String source = entry.getKey();
             for (Map.Entry<String, Integer> edge : entry.getValue().entrySet()) {
                 System.out.printf("%s -> %s [weight=%d]%n",
@@ -99,7 +147,12 @@ public class TextGraphProcessorExtra {
         }
     }
 
-    // 新增方法：将图形输出为图片文件
+    /**
+     * 将有向图保存为图片文件。.
+     *
+     * @param outputPath 输出图片文件路径
+     * @throws IOException 如果生成图片时发生I/O错误
+     */
     public void saveGraphAsImage(String outputPath) throws IOException {
         // 生成DOT文件内容
         StringBuilder dotContent = new StringBuilder();
@@ -129,14 +182,16 @@ public class TextGraphProcessorExtra {
         // 调用Graphviz生成图片
         try {
             String dotPath = "dot"; // 假设dot命令在系统PATH中
-            ProcessBuilder pb = new ProcessBuilder(dotPath, "-Tpng", dotFile.getAbsolutePath(), "-o", outputPath);
+            ProcessBuilder pb = new ProcessBuilder(
+                    dotPath, "-Tpng", dotFile.getAbsolutePath(), "-o", outputPath);
             Process process = pb.start();
             int exitCode = process.waitFor();
 
             if (exitCode != 0) {
                 System.err.println("Graphviz生成图片失败，请确保已安装Graphviz并添加到系统PATH");
                 // 读取错误流
-                try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                try (BufferedReader errorReader = new BufferedReader(
+                        new InputStreamReader(process.getErrorStream()))) {
                     String line;
                     while ((line = errorReader.readLine()) != null) {
                         System.err.println(line);
@@ -155,7 +210,12 @@ public class TextGraphProcessorExtra {
         }
     }
 
-    // 计算节点出度
+    /**
+     * 计算指定单词的出度。.
+     *
+     * @param word 要查询的单词
+     * @return 该单词的出度
+     */
     public int calculateOutDegree(String word) {
         word = word.toLowerCase();
         if (!graph.containsKey(word)) {
@@ -164,7 +224,12 @@ public class TextGraphProcessorExtra {
         return graph.get(word).size();
     }
 
-    // 计算节点入度
+    /**
+     * 计算指定单词的入度。.
+     *
+     * @param word 要查询的单词
+     * @return 该单词的入度
+     */
     public int calculateInDegree(String word) {
         word = word.toLowerCase();
         int count = 0;
@@ -176,7 +241,13 @@ public class TextGraphProcessorExtra {
         return count;
     }
 
-    // 计算两个节点之间的权重
+    /**
+     * 获取两个单词之间的边权重。.
+     *
+     * @param source 源单词
+     * @param target 目标单词
+     * @return 边的权重，如果没有边则返回0
+     */
     public int getEdgeWeight(String source, String target) {
         source = source.toLowerCase();
         target = target.toLowerCase();
@@ -186,6 +257,13 @@ public class TextGraphProcessorExtra {
         return graph.get(source).getOrDefault(target, 0);
     }
 
+    /**
+     * 查询两个单词之间的桥接词。.
+     *
+     * @param word1 第一个单词
+     * @param word2 第二个单词
+     * @return 描述桥接词的字符串结果
+     */
     public String queryBridgeWords(String word1, String word2) {
         word1 = word1.toLowerCase();
         word2 = word2.toLowerCase();
@@ -198,10 +276,10 @@ public class TextGraphProcessorExtra {
             // 处理两个词都不在的情况
             if (!word1Exists && !word2Exists) {
                 return "No \"" + word1 + "\" and \"" + word2 + "\" in the graph!";
-            }
-            // 处理其中一个词不在的情况
-            else {
-                return "No " + (!word1Exists ? "\"" + word1 + "\"" : "\"" + word2 + "\"") + " in the graph!";
+            } else {
+                // 处理其中一个词不在的情况
+                return "No " + (!word1Exists ? "\"" + word1 + "\"" : "\"" + word2 + "\"")
+                        + " in the graph!";
             }
         }
 
@@ -236,7 +314,13 @@ public class TextGraphProcessorExtra {
         }
     }
 
-    // findBridgeWords方法保持不变
+    /**
+     * 查找两个单词之间的所有桥接词。.
+     *
+     * @param word1 第一个单词
+     * @param word2 第二个单词
+     * @return 桥接词列表
+     */
     private List<String> findBridgeWords(String word1, String word2) {
         word1 = word1.toLowerCase();
         word2 = word2.toLowerCase();
@@ -258,7 +342,12 @@ public class TextGraphProcessorExtra {
         return bridges;
     }
 
-    // 生成新文本插入桥接词
+    /**
+     * 生成包含桥接词的新文本。.
+     *
+     * @param inputText 输入文本
+     * @return 包含桥接词的新文本
+     */
     public String generateNewText(String inputText) {
         // 处理输入文本：转换为小写，去除标点，分割单词
         String processed = inputText.replaceAll("[^a-zA-Z]", " ").toLowerCase();
@@ -310,8 +399,14 @@ public class TextGraphProcessorExtra {
         return String.join(" ", result);
     }
 
-    // calcShortestPath方法
-    @SuppressWarnings("checkstyle:Indentation")
+    /**
+     * 计算两个单词之间的最短路径。.
+     *
+     * @param word1 起始单词
+     * @param word2 目标单词
+     * @return 描述最短路径的字符串
+     */
+
     public String calcShortestPath(String word1, String word2) {
         word1 = word1.toLowerCase();
         word2 = word2.toLowerCase();
@@ -385,7 +480,12 @@ public class TextGraphProcessorExtra {
         return String.join(" -> ", path);
     }
 
-    // 修改后的calcAllShortestPathsFrom方法
+    /**
+     * 计算从指定单词到所有其他单词的最短路径。.
+     *
+     * @param startWord 起始单词
+     * @return 包含所有最短路径的映射，键为目标单词，值为路径字符串
+     */
     public Map<String, String> calcAllShortestPathsFrom(String startWord) {
         Map<String, String> allPaths = new HashMap<>();
         startWord = startWord.toLowerCase();
@@ -459,10 +559,17 @@ public class TextGraphProcessorExtra {
         return allPaths;
     }
 
-    // 修改后的calculatePageRank方法
+    /**
+     * 计算图中所有节点的PageRank值。.
+     *
+     * @param d 阻尼系数
+     * @param maxIter 最大迭代次数
+     * @param tol 收敛容差
+     * @return 包含每个节点PageRank值的映射
+     */
     public Map<String, Double> calculatePageRank(double d, int maxIter, double tol) {
-        int N = graph.size();
-        Map<String, Double> pr = initializePageRankByTF();
+        int verticesNum = graph.size();
+        Map<String, Double> pr = initializePageRankByTf();
 
         // 找出所有出度为0的节点（dangling nodes）
         Set<String> danglingNodes = new HashSet<>();
@@ -484,7 +591,7 @@ public class TextGraphProcessorExtra {
             }
 
             // 将danglingSum均分给所有节点
-            double danglingContribution = danglingSum / N;
+            double danglingContribution = danglingSum / verticesNum;
 
             for (String u : graph.keySet()) {
                 double sum = 0;
@@ -504,7 +611,7 @@ public class TextGraphProcessorExtra {
                 // 添加dangling nodes的贡献
                 sum += danglingContribution;
 
-                double prValue = (1 - d) / N + d * sum;
+                double prValue = (1 - d) / verticesNum + d * sum;
                 newPr.put(u, prValue);
                 diff += Math.abs(prValue - pr.get(u));
             }
@@ -517,14 +624,26 @@ public class TextGraphProcessorExtra {
         return pr;
     }
 
+    /**
+     * 计算指定单词的PageRank值。.
+     *
+     * @param word 要查询的单词
+     * @return 该单词的PageRank值
+     */
     public Double calPageRank(String word) {
-        if (graph.isEmpty()) return 0.0;
+        if (graph.isEmpty()) {
+            return 0.0;
+        }
         Map<String, Double> prMap = calculatePageRank(DEFAULT_D, DEFAULT_MAX_ITER, DEFAULT_TOL);
         return prMap.getOrDefault(word.toLowerCase(), 0.0);
     }
 
-    // 改进版初始化PageRank（根据TF分配初始值）
-    Map<String, Double> initializePageRankByTF() {
+    /**
+     * 根据词频初始化PageRank值。.
+     *
+     * @return 包含初始PageRank值的映射
+     */
+    Map<String, Double> initializePageRankByTf() {
         Map<String, Integer> wordCount = new HashMap<>();
         int totalWords = 0;
         for (String w : words) {
@@ -540,37 +659,52 @@ public class TextGraphProcessorExtra {
         return pr;
     }
 
-
-
+    /**
+     * 表示图中的节点，用于最短路径计算。.
+     */
     private static class Node {
+        /** 节点对应的单词. */
         String word;
+        /** 到该节点的距离. */
         int distance;
 
+        /**
+         * 构造一个新的节点。.
+         *
+         * @param word 节点单词
+         * @param distance 到该节点的距离
+         */
         public Node(String word, int distance) {
             this.word = word;
             this.distance = distance;
         }
     }
 
-    // 随机游走
+    /**
+     * 在图中执行随机游走。.
+     *
+     * @return 游走路径的字符串表示
+     * @throws IOException 如果写入文件时发生I/O错误
+     */
     public String randomWalk() throws IOException {
-        if (graph.isEmpty()) return "";
+        if (graph.isEmpty()) {
+            return "";
+        }
 
         Random random = new Random();
         List<String> nodes = new ArrayList<>(graph.keySet());
         String current = nodes.get(random.nextInt(nodes.size()));
 
         BufferedWriter writer = new BufferedWriter(new FileWriter("walk.txt"));
-        Scanner sc = new Scanner(System.in);
 
         // 记录起点
         System.out.println("起点节点: " + current);
         writer.write("节点: " + current);
         writer.newLine();
         StringBuilder sb = new StringBuilder();
-
+        Scanner sc = new Scanner(System.in);
         while (true) {
-            Map<String,Integer> outEdges = graph.get(current);
+            Map<String, Integer> outEdges = graph.get(current);
             if (outEdges == null || outEdges.isEmpty()) {
                 System.out.println("当前节点无出边，遍历结束。");
                 break;
@@ -615,6 +749,11 @@ public class TextGraphProcessorExtra {
         return sb.toString();
     }
 
+    /**
+     * 主方法，提供交互式命令行界面。.
+     *
+     * @param args 命令行参数
+     */
     public static void main(String[] args) {
         TextGraphProcessorExtra processor = new TextGraphProcessorExtra();
         Scanner scanner = new Scanner(System.in);
@@ -659,12 +798,14 @@ public class TextGraphProcessorExtra {
                     case 1:
                         System.out.print("请输入单词: ");
                         String word = scanner.nextLine();
-                        System.out.printf("'%s'的出度为: %d%n", word, processor.calculateOutDegree(word));
+                        System.out.printf("'%s'的出度为: %d%n",
+                                word, processor.calculateOutDegree(word));
                         break;
                     case 2:
                         System.out.print("请输入单词: ");
                         word = scanner.nextLine();
-                        System.out.printf("'%s'的入度为: %d%n", word, processor.calculateInDegree(word));
+                        System.out.printf("'%s'的入度为: %d%n",
+                                word, processor.calculateInDegree(word));
                         break;
                     case 3:
                         System.out.print("请输入源单词: ");
@@ -695,13 +836,16 @@ public class TextGraphProcessorExtra {
 
                         if (word2.isEmpty()) {
                             // 单单词情况：计算到所有其他单词的最短路径
-                            Map<String, String> allPaths = processor.calcAllShortestPathsFrom(word1);
+                            Map<String, String> allPaths =
+                                    processor.calcAllShortestPathsFrom(word1);
                             if (allPaths.isEmpty()) {
                                 System.out.println("没有找到路径。");
                             } else {
                                 System.out.println("\n" + word1 + " 到其他单词的最短路径:");
-                                for (Map.Entry<String, String> entry : allPaths.entrySet()) {
-                                    System.out.println("到 " + entry.getKey() + ": " + entry.getValue());
+                                for (Map.Entry<String, String> entry :
+                                        allPaths.entrySet()) {
+                                    System.out.println(
+                                            "到 " + entry.getKey() + ": " + entry.getValue());
                                     System.out.println("------");
                                 }
                             }
