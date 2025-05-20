@@ -19,7 +19,7 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
-public class TextGraphProcessorTest {
+public class TextGraphProcessorExtra {
     private Map<String, Map<String, Integer>> graph;
     private List<String> words;
 
@@ -28,7 +28,7 @@ public class TextGraphProcessorTest {
     private static final int DEFAULT_MAX_ITER = 100;
     private static final double DEFAULT_TOL = 1e-6;
 
-    public TextGraphProcessorTest() {
+    public TextGraphProcessorExtra() {
         graph = new HashMap<>();
         words = new ArrayList<>();
     }
@@ -616,7 +616,7 @@ public class TextGraphProcessorTest {
     }
 
     public static void main(String[] args) {
-        TextGraphProcessorTest processor = new TextGraphProcessorTest();
+        TextGraphProcessorExtra processor = new TextGraphProcessorExtra();
         Scanner scanner = new Scanner(System.in);
 
         try {
