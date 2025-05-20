@@ -164,9 +164,6 @@ public class TextGraphProcessorExtra {
      * @throws IOException 如果生成图片时发生I/O错误
      */
     public void saveGraphAsImage(String outputPath) throws IOException {
-        validateOutputPath(outputPath);
-        outputPath = Paths.get(outputPath).toAbsolutePath().toString();
-
         // 生成DOT文件内容
         StringBuilder dotContent = new StringBuilder();
         dotContent.append("digraph G {\n");
@@ -193,79 +190,46 @@ public class TextGraphProcessorExtra {
             writer.write(dotContent.toString());
         }
 
-
-
-        String dotPath = getSafeDotPath(); // 假设dot命令在系统PATH中
         // 调用Graphviz生成图片
         try {
-
+            Path projectRoot = Paths.get("").toAbsolutePath().normalize();
+            Path outputImgPath = projectRoot.resolve(outputPath).normalize();
+            if (!outputImgPath.startsWith(projectRoot)) {
+                throw new SecurityException("不允许写入项目目录外的文件: " + outputPath);
+            }
             ProcessBuilder pb = new ProcessBuilder(
-                    dotPath, "-Tpng", dotFile.getAbsolutePath(), "-o", outputPath);
+                    "dot",
+                    "-Tpng",
+                    dotFile.getAbsolutePath(),
+                    "-o",
+                    outputImgPath.toString()
+            );
             Process process = pb.start();
             int exitCode = process.waitFor();
 
             if (exitCode != 0) {
+                System.err.println("Graphviz生成图片失败，请确保已安装Graphviz并添加到系统PATH");
+                // 读取错误流
                 try (BufferedReader errorReader = new BufferedReader(
                         new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
-                    errorReader.lines().forEach(System.err::println);
+                    String line;
+                    while ((line = errorReader.readLine()) != null) {
+                        System.err.println(line);
+                    }
                 }
-                throw new IOException("Graphviz 执行失败");
+            } else {
+                System.out.println("图形已保存为: " + outputPath);
             }
-            System.out.println("图形已保存为: " + outputPath);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             System.err.println("生成图片过程被中断");
+        } catch (IOException e) {
+            System.err.println("执行Graphviz时出错: " + e.getMessage());
         } finally {
             if (!dotFile.delete()) {
                 System.err.println("警告: 临时文件未能成功删除: " + dotFile.getAbsolutePath());
             }
         }
-    }
-    /**
-     * 验证输出路径是否合法。.
-
-     *
-     * @param outputPath 待验证的输出文件路径
-     * @throws IOException 如果路径无效、超出项目范围或不是 .png 文件
-     */
-    public void validateOutputPath(String outputPath) throws IOException {
-        try {
-            // 获取项目根目录的绝对规范路径
-            Path projectRoot = Paths.get("").toAbsolutePath().normalize();
-
-            // 解析并规范化用户传入的输出路径
-            Path output = Paths.get(outputPath).toAbsolutePath().normalize();
-
-            // 判断输出路径是否在项目目录内
-            if (!output.startsWith(projectRoot)) {
-                throw new IOException("输出路径必须位于项目目录内");
-            }
-
-            // 可选：限制扩展名
-            if (!outputPath.toLowerCase().endsWith(".png")) {
-                throw new IOException("输出文件必须是PNG格式");
-            }
-        } catch (InvalidPathException e) {
-            throw new IOException("无效的输出路径: " + outputPath);
-        }
-    }
-
-    /**
-     * 获取 Graphviz dot 命令的可信路径。.
-     *
-     * @return dot 可执行文件的路径字符串
-     * @throws IOException 如果没有找到有效的 dot 路径
-     */
-    private String getSafeDotPath() throws IOException {
-        String[] possiblePaths = {"D:\\Toolkit\\windows_10_cmake_Release_Graphviz-12.2.1-win64"
-                + "\\Graphviz-12.2.1-win64\\bin\\dot.exe"  // Windows
-        };
-        for (String path : possiblePaths) {
-            if (new File(path).exists()) {
-                return path;
-            }
-        }
-        throw new IOException("未找到 Graphviz 的 dot 命令");
     }
 
     /**
