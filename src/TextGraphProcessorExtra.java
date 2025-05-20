@@ -1,12 +1,18 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -18,6 +24,7 @@ import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 文本图处理器，用于构建和处理文本的有向图表示。.
@@ -67,13 +74,25 @@ public class TextGraphProcessorExtra {
      * @throws IOException 如果读取文件时发生I/O错误
      */
     public void processTextFile(String filePath) throws IOException {
+        // 获取项目根目录
+        Path projectRoot = Paths.get("").toAbsolutePath().normalize();
+        Path inputPath = projectRoot.resolve(filePath).normalize();
+
+        // 确保路径未逃逸出项目目录
+        if (!inputPath.startsWith(projectRoot)) {
+            throw new SecurityException("不允许访问项目目录外的文件: " + filePath);
+        }
+
+        // 读取文件内容
         StringBuilder content = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+        try (BufferedReader reader = Files.newBufferedReader(inputPath)) {
             String line;
             while ((line = reader.readLine()) != null) {
-                content.append(line).append(" "); // 将换行符替换为空格
+                content.append(line).append(" ");
             }
         }
+
+        // 处理文本 + 构建图
         processText(content.toString());
         buildGraph();
     }
@@ -122,23 +141,14 @@ public class TextGraphProcessorExtra {
         }
     }
 
-    /**
-     * 获取构建的有向图。.
-     *
-     * @return 有向图的邻接表表示
-     */
-    public Map<String, Map<String, Integer>> getGraph() {
-        return graph;
-    }
 
     /**
      * 显示有向图的结构。.
      *
-     * @param showGraph 要显示的有向图
      */
-    public void showDirectedGraph(Map<String, Map<String, Integer>> showGraph) {
+    public void showDirectedGraph() {
         System.out.println("有向图结构:");
-        for (Map.Entry<String, Map<String, Integer>> entry : showGraph.entrySet()) {
+        for (Map.Entry<String, Map<String, Integer>> entry : graph.entrySet()) {
             String source = entry.getKey();
             for (Map.Entry<String, Integer> edge : entry.getValue().entrySet()) {
                 System.out.printf("%s -> %s [weight=%d]%n",
@@ -154,6 +164,9 @@ public class TextGraphProcessorExtra {
      * @throws IOException 如果生成图片时发生I/O错误
      */
     public void saveGraphAsImage(String outputPath) throws IOException {
+        validateOutputPath(outputPath);
+        outputPath = Paths.get(outputPath).toAbsolutePath().toString();
+
         // 生成DOT文件内容
         StringBuilder dotContent = new StringBuilder();
         dotContent.append("digraph G {\n");
@@ -166,7 +179,7 @@ public class TextGraphProcessorExtra {
             for (Map.Entry<String, Integer> edge : entry.getValue().entrySet()) {
                 String target = edge.getKey();
                 int weight = edge.getValue();
-                dotContent.append(String.format("    \"%s\" -> \"%s\" [label=\"%d\"];\n",
+                dotContent.append(String.format("    \"%s\" -> \"%s\" [label=\"%d\"];%n",
                         source, target, weight));
             }
         }
@@ -175,39 +188,84 @@ public class TextGraphProcessorExtra {
 
         // 将DOT内容写入临时文件
         File dotFile = File.createTempFile("graph", ".dot");
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(dotFile))) {
+        try (BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(dotFile), StandardCharsets.UTF_8))) {
             writer.write(dotContent.toString());
         }
 
+
+
+        String dotPath = getSafeDotPath(); // 假设dot命令在系统PATH中
         // 调用Graphviz生成图片
         try {
-            String dotPath = "dot"; // 假设dot命令在系统PATH中
+
             ProcessBuilder pb = new ProcessBuilder(
                     dotPath, "-Tpng", dotFile.getAbsolutePath(), "-o", outputPath);
             Process process = pb.start();
             int exitCode = process.waitFor();
 
             if (exitCode != 0) {
-                System.err.println("Graphviz生成图片失败，请确保已安装Graphviz并添加到系统PATH");
-                // 读取错误流
                 try (BufferedReader errorReader = new BufferedReader(
-                        new InputStreamReader(process.getErrorStream()))) {
-                    String line;
-                    while ((line = errorReader.readLine()) != null) {
-                        System.err.println(line);
-                    }
+                        new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+                    errorReader.lines().forEach(System.err::println);
                 }
-            } else {
-                System.out.println("图形已保存为: " + outputPath);
+                throw new IOException("Graphviz 执行失败");
             }
+            System.out.println("图形已保存为: " + outputPath);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             System.err.println("生成图片过程被中断");
-        } catch (IOException e) {
-            System.err.println("执行Graphviz时出错: " + e.getMessage());
         } finally {
-            dotFile.delete(); // 删除临时文件
+            if (!dotFile.delete()) {
+                System.err.println("警告: 临时文件未能成功删除: " + dotFile.getAbsolutePath());
+            }
         }
+    }
+    /**
+     * 验证输出路径是否合法。.
+
+     *
+     * @param outputPath 待验证的输出文件路径
+     * @throws IOException 如果路径无效、超出项目范围或不是 .png 文件
+     */
+    public void validateOutputPath(String outputPath) throws IOException {
+        try {
+            // 获取项目根目录的绝对规范路径
+            Path projectRoot = Paths.get("").toAbsolutePath().normalize();
+
+            // 解析并规范化用户传入的输出路径
+            Path output = Paths.get(outputPath).toAbsolutePath().normalize();
+
+            // 判断输出路径是否在项目目录内
+            if (!output.startsWith(projectRoot)) {
+                throw new IOException("输出路径必须位于项目目录内");
+            }
+
+            // 可选：限制扩展名
+            if (!outputPath.toLowerCase().endsWith(".png")) {
+                throw new IOException("输出文件必须是PNG格式");
+            }
+        } catch (InvalidPathException e) {
+            throw new IOException("无效的输出路径: " + outputPath);
+        }
+    }
+
+    /**
+     * 获取 Graphviz dot 命令的可信路径。.
+     *
+     * @return dot 可执行文件的路径字符串
+     * @throws IOException 如果没有找到有效的 dot 路径
+     */
+    private String getSafeDotPath() throws IOException {
+        String[] possiblePaths = {"D:\\Toolkit\\windows_10_cmake_Release_Graphviz-12.2.1-win64"
+                + "\\Graphviz-12.2.1-win64\\bin\\dot.exe"  // Windows
+        };
+        for (String path : possiblePaths) {
+            if (new File(path).exists()) {
+                return path;
+            }
+        }
+        throw new IOException("未找到 Graphviz 的 dot 命令");
     }
 
     /**
@@ -378,7 +436,6 @@ public class TextGraphProcessorExtra {
         List<String> result = new ArrayList<>();
         result.add(originalValidWords.get(0)); // 添加第一个单词（保留原始大小写）
 
-        Random random = new Random();
         for (int i = 0; i < validWords.size() - 1; i++) {
             String current = validWords.get(i);
             String next = validWords.get(i + 1);
@@ -387,7 +444,7 @@ public class TextGraphProcessorExtra {
             List<String> bridges = findBridgeWords(current, next);
             if (!bridges.isEmpty()) {
                 // 随机选择一个桥接词（保持小写，或可以根据需要调整）
-                String bridge = bridges.get(random.nextInt(bridges.size()));
+                String bridge = bridges.get(ThreadLocalRandom.current().nextInt(bridges.size()));
                 result.add(bridge);
             }
 
@@ -573,11 +630,12 @@ public class TextGraphProcessorExtra {
 
         // 找出所有出度为0的节点（dangling nodes）
         Set<String> danglingNodes = new HashSet<>();
-        for (String node : graph.keySet()) {
-            if (graph.get(node).isEmpty()) {
-                danglingNodes.add(node);
+        for (Map.Entry<String, Map<String, Integer>> entry : graph.entrySet()) {
+            if (entry.getValue().isEmpty()) {
+                danglingNodes.add(entry.getKey());
             }
         }
+
 
         // 迭代计算
         for (int iter = 0; iter < maxIter; iter++) {
@@ -691,18 +749,19 @@ public class TextGraphProcessorExtra {
             return "";
         }
 
-        Random random = new Random();
+        SecureRandom random = new SecureRandom();
         List<String> nodes = new ArrayList<>(graph.keySet());
         String current = nodes.get(random.nextInt(nodes.size()));
 
-        BufferedWriter writer = new BufferedWriter(new FileWriter("walk.txt"));
+        BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream("walk.txt"), StandardCharsets.UTF_8));
 
         // 记录起点
         System.out.println("起点节点: " + current);
         writer.write("节点: " + current);
         writer.newLine();
         StringBuilder sb = new StringBuilder();
-        Scanner sc = new Scanner(System.in);
+        Scanner sc = new Scanner(System.in, StandardCharsets.UTF_8);
         while (true) {
             Map<String, Integer> outEdges = graph.get(current);
             if (outEdges == null || outEdges.isEmpty()) {
@@ -756,7 +815,7 @@ public class TextGraphProcessorExtra {
      */
     public static void main(String[] args) {
         TextGraphProcessorExtra processor = new TextGraphProcessorExtra();
-        Scanner scanner = new Scanner(System.in);
+        Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8);
 
         try {
             // 直接指定文件路径为input.txt
@@ -765,7 +824,7 @@ public class TextGraphProcessorExtra {
             processor.processTextFile(filePath);
 
             System.out.println("\n文本处理完成，有向图已构建。");
-            processor.showDirectedGraph(processor.getGraph());
+            processor.showDirectedGraph();
 
             // 新增：保存图形为图片
             System.out.println("\n正在生成图形文件...");
