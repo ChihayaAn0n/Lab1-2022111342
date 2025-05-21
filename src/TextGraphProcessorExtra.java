@@ -371,54 +371,49 @@ public class TextGraphProcessorExtra {
      * @return 包含桥接词的新文本
      */
     public String generateNewText(String inputText) {
-        // 处理输入文本：转换为小写，去除标点，分割单词
-        String processed = inputText.replaceAll("[^a-zA-Z]", " ").toLowerCase();
-        String[] inputWords = processed.split("\\s+");
+        // 原始文本分词，保留标点
+        String[] tokens = inputText.split("(?<=\\b)(?=\\b)|(?<=\\W)(?=\\w)|(?<=\\w)(?=\\W)");
 
-        // 过滤空单词
+        // 提取纯单词并转换为小写用于查找桥接词
         List<String> validWords = new ArrayList<>();
-        for (String word : inputWords) {
-            if (!word.isEmpty()) {
-                validWords.add(word);
+        for (String token : tokens) {
+            if (token.matches("[a-zA-Z]+")) {
+                validWords.add(token.toLowerCase());
             }
         }
 
         if (validWords.size() < 2) {
-            return inputText; // 不足两个单词无法插入桥接词
+            return inputText;
         }
 
-        // 重建原始大小写的单词列表（用于输出）
-        String[] originalWords = inputText.split("\\s+");
-        List<String> originalValidWords = new ArrayList<>();
-        for (String word : originalWords) {
-            if (!word.replaceAll("[^a-zA-Z]", "").isEmpty()) {
-                originalValidWords.add(word);
+        // 构建结果
+        StringBuilder result = new StringBuilder();
+        int wordIndex = 0;
+
+        for (int i = 0; i < tokens.length; i++) {
+            String token = tokens[i];
+
+            if (token.matches("[a-zA-Z]+") && wordIndex < validWords.size() - 1) {
+                String current = validWords.get(wordIndex);
+                String next = validWords.get(wordIndex + 1);
+
+                result.append(token); // 添加原始单词
+                // 查找桥接词并插入
+                List<String> bridges = findBridgeWords(current, next);
+                if (!bridges.isEmpty()) {
+                    String bridge = bridges.get(ThreadLocalRandom.current().nextInt(bridges.size()));
+                    result.append(" ").append(bridge); // 插入桥接词
+                }
+                result.append(" ");
+                wordIndex++;
+            } else {
+                result.append(token);
             }
         }
 
-        // 构建新文本
-        List<String> result = new ArrayList<>();
-        result.add(originalValidWords.get(0)); // 添加第一个单词（保留原始大小写）
-
-        for (int i = 0; i < validWords.size() - 1; i++) {
-            String current = validWords.get(i);
-            String next = validWords.get(i + 1);
-
-            // 查找桥接词
-            List<String> bridges = findBridgeWords(current, next);
-            if (!bridges.isEmpty()) {
-                // 随机选择一个桥接词（保持小写，或可以根据需要调整）
-                String bridge = bridges.get(ThreadLocalRandom.current().nextInt(bridges.size()));
-                result.add(bridge);
-            }
-
-            // 添加下一个单词（保留原始大小写）
-            result.add(originalValidWords.get(i + 1));
-        }
-
-        // 重建文本（保留原始标点和空格可能比较复杂，这里简化处理）
-        return String.join(" ", result);
+        return result.toString().replaceAll("\\s+", " ").trim();
     }
+
 
     /**
      * 计算两个单词之间的最短路径。.
