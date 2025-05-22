@@ -401,7 +401,8 @@ public class TextGraphProcessorExtra {
                 // 查找桥接词并插入
                 List<String> bridges = findBridgeWords(current, next);
                 if (!bridges.isEmpty()) {
-                    String bridge = bridges.get(ThreadLocalRandom.current().nextInt(bridges.size()));
+                    String bridge = bridges.get(
+                            ThreadLocalRandom.current().nextInt(bridges.size()));
                     result.append(" ").append(bridge); // 插入桥接词
                 }
                 result.append(" ");
